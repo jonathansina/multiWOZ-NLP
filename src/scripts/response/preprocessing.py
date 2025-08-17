@@ -13,17 +13,24 @@ def preprocess_text_realization(dialogue: Dict) -> List[Tuple[str, str]]:
     speakers = turns["speaker"]
     acts = turns["dialogue_acts"]
 
+    last_user_utt = ""
     for i, (utt, spk) in enumerate(zip(utterances, speakers)):
+        if spk == 0:
+            last_user_utt = utt
+        
         if spk == 1 and i < len(acts):
             act = acts[i]["dialog_act"]
-            # flatten as above
+            # flatten as before
             label_parts = []
             for act_type, act_slots in zip(act["act_type"], act["act_slots"]):
                 slots = [f"{s}={v}" for s, v in zip(act_slots.get("slot_name", []), act_slots.get("slot_value", []))]
                 label_parts.append(f"{act_type}({', '.join(slots)})")
             action_label = " | ".join(label_parts)
 
-            samples.append((action_label, utt))
+            # add last user utterance to input
+            input_with_context = f"[USER]: {last_user_utt} [ACTION]: {action_label}"
+
+            samples.append((input_with_context, utt))
 
     return samples
 
@@ -32,7 +39,7 @@ class ResponseDataset(Dataset):
     def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_output_len: int = 64):
         self.tokenizer = tokenizer
         self.max_output_len = max_output_len
-        
+
         self.actions = []
         self.responses = []
 

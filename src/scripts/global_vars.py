@@ -11,4 +11,8 @@ else:
     DEVICE = torch.device("cpu")
     
 BATCH_SIZE = 64
-MAX_LENGTH = 128
+
+MAX_LENGTH_ACTION = 128
+MAX_LENGTH_RESPONSE = 128
+
+MAX_TURNS = 2

@@ -79,6 +79,6 @@ def train_model(model, optimizer, scheduler, train_loader, val_loader, device, n
         model.load_state_dict(best_model_state)
         
     if save:
-        torch.save(model.state_dict(), "../../models/multixoz_response_model.pth")
+        torch.save(model.state_dict(), save)
         
     return model
