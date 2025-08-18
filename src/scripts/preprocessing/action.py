@@ -3,6 +3,47 @@ from typing import List, Dict, Tuple
 
 from transformers import T5Tokenizer
 from torch.utils.data import Dataset
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+
+
+def get_evaluation_score(predictions: List[str], references: List[str]) -> float:
+    total_slots = 0
+    missed_slots = 0
+    smoothing = SmoothingFunction().method1
+    
+    predictions = [pred.strip().lower() for pred in predictions]
+    references = [ref.strip().lower() for ref in references]
+    
+    bleu_scores = [
+        sentence_bleu(
+            [ref.split()], 
+            pred.split(), 
+            smoothing_function=smoothing, 
+            weights=(1, 0, 0, 0)
+        ) 
+        for pred, ref in zip(predictions, references)
+    ]
+
+    for pred, act in zip(predictions, references):
+        slots = []
+        for part in act.split('|'):
+            if '(' in part and ')' in part:
+                slot_str = part.split('(')[1].rstrip(')')
+                for s in slot_str.split(', '):
+                    if '=' in s:
+                        slots.append(s.split('=')[1].strip())
+        total_slots += len(slots)
+        for slot_val in slots:
+            if slot_val.lower() not in pred.lower():
+                missed_slots += 1
+
+    ser = 1 - (missed_slots / total_slots if total_slots > 0 else 0.0)
+    avg_bleu = sum(bleu_scores) / len(bleu_scores)
+    
+    return {
+        "bleu_score": avg_bleu,
+        "ser_score": ser
+    }
 
 
 def preprocess_action_prediction(dialogue: Dict, max_turns: int = 5) -> List[Tuple[str, str]]:
@@ -22,7 +63,6 @@ def preprocess_action_prediction(dialogue: Dict, max_turns: int = 5) -> List[Tup
         if spk == 1 and i < len(acts):
             act = acts[i]["dialog_act"]
             
-            # flatten action into string label (e.g. "Restaurant-Inform(area=centre, pricerange=expensive)")
             label_parts = []
             for act_type, act_slots in zip(act["act_type"], act["act_slots"]):
                 slots = [f"{s}={v}" for s, v in zip(act_slots.get("slot_name", []), act_slots.get("slot_value", []))]

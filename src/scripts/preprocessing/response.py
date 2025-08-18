@@ -3,6 +3,42 @@ from typing import List, Dict, Tuple
 
 from transformers import T5Tokenizer
 from torch.utils.data import Dataset
+from bert_score import score as bert_score
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+
+
+def get_evaluation_score(predictions: List[str], references: List[str]) -> float:
+    smoothing = SmoothingFunction().method1
+    
+    predictions = [pred.strip().lower() for pred in predictions]
+    references = [ref.strip().lower() for ref in references]
+    
+    bleu_scores = [
+        sentence_bleu(
+            [ref.split()], 
+            pred.split(), 
+            smoothing_function=smoothing,
+            weights=(1, 0, 0, 0)
+        ) 
+        for pred, ref in zip(predictions, references)
+    ]
+
+    P, R, F1 = bert_score(
+        predictions, 
+        references, 
+        lang='en', 
+        rescale_with_baseline=True, 
+        verbose=True, 
+        batch_size=256
+    )
+    
+    avg_bert_f1 = F1.mean().item()
+    avg_bleu = sum(bleu_scores) / len(bleu_scores)
+    
+    return {
+        "bleu_score": avg_bleu,
+        "bert_f1_score": avg_bert_f1
+    }
 
 
 def preprocess_text_realization(dialogue: Dict) -> List[Tuple[str, str]]:
@@ -19,14 +55,13 @@ def preprocess_text_realization(dialogue: Dict) -> List[Tuple[str, str]]:
         
         if spk == 1 and i < len(acts):
             act = acts[i]["dialog_act"]
-            # flatten as before
+
             label_parts = []
             for act_type, act_slots in zip(act["act_type"], act["act_slots"]):
                 slots = [f"{s}={v}" for s, v in zip(act_slots.get("slot_name", []), act_slots.get("slot_value", []))]
                 label_parts.append(f"{act_type}({', '.join(slots)})")
             action_label = " | ".join(label_parts)
 
-            # add last user utterance to input
             input_with_context = f"[USER]: {last_user_utt} [ACTION]: {action_label}"
 
             samples.append((input_with_context, utt))
