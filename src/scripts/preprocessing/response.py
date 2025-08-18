@@ -1,4 +1,3 @@
-
 import tqdm
 from typing import List, Dict, Tuple
 
@@ -36,8 +35,9 @@ def preprocess_text_realization(dialogue: Dict) -> List[Tuple[str, str]]:
 
 
 class ResponseDataset(Dataset):
-    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_output_len: int = 64):
+    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_output_len: int = 64, max_input_len: int = 64):
         self.tokenizer = tokenizer
+        self.max_input_len = max_input_len
         self.max_output_len = max_output_len
 
         self.actions = []
@@ -58,7 +58,7 @@ class ResponseDataset(Dataset):
             self.actions[idx], 
             padding='max_length', 
             truncation=True, 
-            max_length=self.max_output_len, 
+            max_length=self.max_input_len, 
             return_tensors="pt"
         )
 
