@@ -48,11 +48,70 @@ multiWOZ-NLP/
 ## 🔧 Key Components
 
 ### 1. Global Configuration (`global_vars.py`)
-Contains all project-wide configuration parameters:
-- **Model Selection**: T5-small transformer model
-- **Training Parameters**: Batch size (256), sequence lengths
-- **Device Configuration**: Automatic GPU/MPS/CPU detection
-- **Dialogue Context**: Maximum turns for context window
+The global variables file serves as the central configuration hub for the entire project, controlling all critical aspects of model behavior, training, and inference. Understanding these variables is crucial for effective use of the system:
+
+#### Model Configuration
+```python
+MODEL_NAME = "google-t5/t5-small"  # Can be changed to "google/t5-efficient-mini" for faster training
+```
+- **Purpose**: Defines which pre-trained T5 model to use as the base
+- **Impact**: Larger models (like t5-base) provide better performance but require more computational resources
+- **Usage**: Simply change this variable to experiment with different model sizes
+
+#### Training Parameters
+```python
+BATCH_SIZE = 256                    # Number of samples processed together
+MAX_LENGTH_ENCODER_ACTION = 64      # Input sequence length for action prediction
+MAX_LENGTH_DECODER_ACTION = 32      # Output sequence length for action prediction
+MAX_LENGTH_ENCODER_RESPONSE = 64    # Input sequence length for response generation
+MAX_LENGTH_DECODER_RESPONSE = 32    # Output sequence length for response generation
+MAX_TURNS = 2                       # Number of conversation turns to include as context
+```
+- **BATCH_SIZE**: Higher values speed up training but require more GPU memory
+- **Sequence Lengths**: Balance between context preservation and computational efficiency
+- **MAX_TURNS**: Controls how much conversation history is considered for predictions
+
+#### Checkpoint Management
+```python
+USE_SAVE_CHECKPOINT = False
+```
+- **Critical Feature**: This boolean flag controls whether to save model checkpoints during training
+- **When True**: 
+  - Models are automatically saved after training
+  - Saved to `models/multixoz_action_model.pth` and `models/multixoz_response_model.pth`
+  - Enables loading pre-trained models for inference without retraining
+- **When False**: 
+  - Models exist only in memory during the session
+  - No persistent storage of trained weights
+  - Requires retraining for each new session
+
+**💡 Pro Tip**: Set `USE_SAVE_CHECKPOINT = True` for production use or when you want to:
+- Skip training and directly use pre-trained models
+- Resume training from a previous checkpoint
+- Share trained models with team members
+- Conduct inference-only experiments
+
+#### Device Configuration
+```python
+# Automatic device detection with priority: CUDA > MPS > CPU
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")      # NVIDIA GPU acceleration
+elif torch.mps.is_available():
+    DEVICE = torch.device("mps")       # Apple Silicon acceleration
+else:
+    DEVICE = torch.device("cpu")       # Fallback to CPU
+```
+- **Smart Detection**: Automatically selects the best available hardware
+- **Performance Impact**: GPU acceleration can be 10-100x faster than CPU
+- **Cross-Platform**: Supports NVIDIA GPUs, Apple Silicon, and CPU fallback
+
+#### How to Use These Variables Effectively
+
+1. **Quick Experimentation**: Set `USE_SAVE_CHECKPOINT = False` and reduce `BATCH_SIZE` for rapid prototyping
+2. **Production Training**: Set `USE_SAVE_CHECKPOINT = True` with optimal batch size for your hardware
+3. **Inference Only**: With saved checkpoints, you can load models directly without any training
+4. **Memory Management**: Adjust sequence lengths and batch size based on available GPU memory
+5. **Context Control**: Modify `MAX_TURNS` to experiment with different amounts of conversation history
 
 ### 2. Data Preprocessing
 
@@ -110,6 +169,26 @@ pip install torch transformers datasets nltk bert-score matplotlib numpy tqdm
 
 ### Training Models
 
+#### Understanding Checkpoint Configuration
+Before training, it's important to understand the checkpoint system controlled by the `USE_SAVE_CHECKPOINT` variable in `global_vars.py`:
+
+**Option 1: Training with Checkpoints (Recommended)**
+```python
+USE_SAVE_CHECKPOINT = True  # Set this in global_vars.py
+```
+- ✅ Models are saved automatically after training
+- ✅ Can resume inference without retraining
+- ✅ Models persist between sessions
+- ✅ Enables model sharing and deployment
+
+**Option 2: Training without Checkpoints (Development)**
+```python
+USE_SAVE_CHECKPOINT = False  # Set this in global_vars.py
+```
+- ⚠️ Models exist only during the current session
+- ⚠️ Requires retraining for each new experiment
+- ✅ Useful for quick experimentation and debugging
+
 #### 1. Action Prediction Model
 Open `src/notebooks/action_model.ipynb` and run all cells to:
 - Load the MultiWOZ v2.2 dataset
@@ -123,6 +202,39 @@ Open `src/notebooks/response_model.ipynb` and run all cells to:
 - Train the T5 model for response generation
 - Evaluate using BLEU and BERT-F1 scores
 - Generate sample responses
+
+### Using Pre-trained Models (No Training Required)
+
+If you have saved model checkpoints in the `models/` directory, you can skip training and directly use the models for inference:
+
+#### Loading Saved Models
+```python
+import torch
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+from scripts.global_vars import MODEL_NAME, DEVICE
+
+# Load tokenizer and model architecture
+tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME, legacy=True)
+model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
+
+# Load trained weights from checkpoint
+model.load_state_dict(torch.load('models/multixoz_action_model.pth', map_location=DEVICE))
+model.to(DEVICE)
+
+# Now ready for inference without any training!
+```
+
+#### Benefits of Using Checkpoints
+1. **Instant Deployment**: No waiting for training completion
+2. **Reproducible Results**: Same model weights produce consistent outputs
+3. **Resource Efficiency**: Save computational time and energy
+4. **Production Ready**: Trained models can be immediately deployed
+5. **Experimentation**: Focus on inference and evaluation rather than training
+
+#### Workflow Recommendations
+- **First Time**: Set `USE_SAVE_CHECKPOINT = True` and train both models
+- **Subsequent Runs**: Load checkpoints and skip directly to inference/evaluation
+- **Model Updates**: Only retrain when you modify architecture or training data
 
 ### Model Architecture
 
@@ -150,6 +262,37 @@ Both models use **T5-small** (Text-To-Text Transfer Transformer):
 ### Response Generation
 - **BLEU Score**: Evaluates lexical similarity
 - **BERT-F1**: Measures semantic similarity using BERT embeddings
+
+## 📋 Configuration Examples
+
+### Example 1: Quick Development Setup
+```python
+# In global_vars.py - for rapid experimentation
+MODEL_NAME = "google/t5-efficient-mini"  # Smaller, faster model
+BATCH_SIZE = 64                          # Reduced for limited GPU memory
+USE_SAVE_CHECKPOINT = False              # No persistence needed
+MAX_TURNS = 1                           # Simplified context
+```
+**Use Case**: Initial development, debugging, quick prototyping
+
+### Example 2: Production Training Setup
+```python
+# In global_vars.py - for final model training
+MODEL_NAME = "google-t5/t5-small"       # Standard model size
+BATCH_SIZE = 256                        # Full batch size for efficiency
+USE_SAVE_CHECKPOINT = True              # Save for deployment
+MAX_TURNS = 2                          # Full context window
+```
+**Use Case**: Final model training, deployment preparation
+
+### Example 3: Inference-Only Setup
+```python
+# In global_vars.py - when using pre-trained models
+MODEL_NAME = "google-t5/t5-small"       # Must match training configuration
+BATCH_SIZE = 512                        # Can be larger for inference
+USE_SAVE_CHECKPOINT = True              # Load existing checkpoints
+```
+**Use Case**: Production inference, model evaluation, demonstration
 
 ## 🎮 Usage Examples
 
