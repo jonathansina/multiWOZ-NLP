@@ -1,8 +1,20 @@
 import tqdm
 import torch
+import pickle
+from typing import List, Literal, Union, Type, Any
 
 
-def inference_model(model, tokenizer, input_text, max_length_encoder, max_length_decoder, device, batch_size=1):
+def inference_model(
+    model : Type[Any], 
+    tokenizer : Type[Any], 
+    input_text : Union[List[str], str], 
+    max_length_encoder : int, 
+    max_length_decoder : int, 
+    device : Literal["cuda", "cpu", "mps"], 
+    batch_size : int = 1, 
+    save: bool = False
+):
+
     model.eval()
     model.to(device)
 
@@ -18,7 +30,7 @@ def inference_model(model, tokenizer, input_text, max_length_encoder, max_length
     )
 
     all_responses = []
-    
+
     with torch.no_grad():
         for i in tqdm.tqdm(range(0, len(input_text), batch_size), desc="Inference"):
             batch_enc = input_enc['input_ids'][i:i + batch_size].to(device)
@@ -40,4 +52,8 @@ def inference_model(model, tokenizer, input_text, max_length_encoder, max_length
         if len(all_responses) == 1:
             return all_responses[0]
         
-        return all_responses
+    if save:
+        with open(save, "wb") as f:
+            pickle.dump(all_responses, f)
+
+    return all_responses

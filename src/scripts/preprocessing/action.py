@@ -1,5 +1,14 @@
+import sys
+sys.path.append("..")
+
 import tqdm
 from typing import List, Dict, Tuple
+
+from scripts.preprocessing.delexicalization import (
+    delexicalize_text, 
+    delexicalize_action_label,
+    extract_slot_pairs_from_act
+)
 
 from transformers import T5Tokenizer
 from torch.utils.data import Dataset
@@ -32,6 +41,7 @@ def get_evaluation_score(predictions: List[str], references: List[str]) -> float
                 for s in slot_str.split(', '):
                     if '=' in s:
                         slots.append(s.split('=')[1].strip())
+
         total_slots += len(slots)
         for slot_val in slots:
             if slot_val.lower() not in pred.lower():
@@ -46,37 +56,47 @@ def get_evaluation_score(predictions: List[str], references: List[str]) -> float
     }
 
 
-def preprocess_action_prediction(dialogue: Dict, max_turns: int = 5) -> List[Tuple[str, str]]:
+def preprocess_action_prediction(dialogue: Dict, max_turns: int, delex: bool = False) -> List[Tuple[str, str]]:
     samples = []
+
     turns = dialogue["turns"]
-    utterances = turns["utterance"]
     speakers = turns["speaker"]
-    acts = turns["dialogue_acts"]
+    utterances = turns["utterance"]
+    acts_all = turns["dialogue_acts"]
 
     context = []
-    for i, (utt, spk) in enumerate(zip(utterances, speakers)):
-        context.append(("USER" if spk == 0 else "SYS") + ": " + utt)
+    for i, (utterance, speaker) in enumerate(zip(utterances, speakers)):
+        context.append(("USER" if speaker == 0 else "SYS") + ": " + utterance)
         
         if len(context) > max_turns:
             context = context[-max_turns:]
-        
-        if spk == 1 and i < len(acts):
-            act = acts[i]["dialog_act"]
-            
-            label_parts = []
-            for act_type, act_slots in zip(act["act_type"], act["act_slots"]):
-                slots = [f"{s}={v}" for s, v in zip(act_slots.get("slot_name", []), act_slots.get("slot_value", []))]
-                label_parts.append(f"{act_type}({', '.join(slots)})")
-            action_label = " | ".join(label_parts)
 
-            input_text = " ".join([c for c in context])
-            samples.append((input_text, action_label))
+        if i < len(acts_all):
+            act = acts_all[i]["dialog_act"]
+            slot_pairs = extract_slot_pairs_from_act(act)
+
+            if delex:
+                context_str = " ".join([delexicalize_text(u, slot_pairs) for u in context])
+                action_label = delexicalize_action_label(act)
+            else:
+                context_str = " ".join([u for u in context])
+                parts = []
+                
+                for act_type, aslots in zip(act.get("act_type", []), act.get("act_slots", [])):
+                    names = aslots.get("slot_name", [])
+                    values = aslots.get("slot_value", [])
+                    slots = [f"{n.split('-')[-1]}={v}" for n, v in zip(names, values)]
+                    parts.append(f"{act_type}({', '.join(slots)})")
+        
+                action_label = " | ".join(parts)
+
+            samples.append((context_str, action_label))
 
     return samples
 
 
 class ActionDataset(Dataset):
-    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_turns: int, max_output_len: int = 64, max_input_len: int = 64):
+    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_turns: int, max_output_len: int = 64, max_input_len: int = 64, delex: bool = False):
         self.tokenizer = tokenizer
         self.max_input_len = max_input_len
         self.max_output_len = max_output_len
@@ -85,7 +105,11 @@ class ActionDataset(Dataset):
         self.actions = []
 
         for dialogue in tqdm.tqdm(data, desc="Processing dialogues"):
-            preprocessed_text = preprocess_action_prediction(dialogue, max_turns=max_turns)
+            preprocessed_text = preprocess_action_prediction(
+                dialogue, 
+                max_turns=max_turns, 
+                delex=delex
+            )
 
             for (input, action) in preprocessed_text:
                 self.inputs.append(input)

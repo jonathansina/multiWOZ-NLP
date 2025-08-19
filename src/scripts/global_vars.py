@@ -1,5 +1,6 @@
 import torch
 
+
 MODEL_NAME = "google-t5/t5-small" # "google-t5/t5-small", "google/t5-efficient-mini"
     
 BATCH_SIZE = 256
@@ -12,7 +13,7 @@ MAX_LENGTH_DECODER_RESPONSE = 32
 
 MAX_TURNS = 2
 
-USE_TRAINED_MODEL = False
+USE_SAVE_CHECKPOINT = False
 
 
 if torch.cuda.is_available():

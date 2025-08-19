@@ -56,7 +56,16 @@ def evaluate_epoch(model, valid_loader, device):
     return total_loss / num_batches
 
 
-def train_model(model, optimizer, scheduler, train_loader, val_loader, device, num_epochs=3, save=False):
+def train_model(
+    model, 
+    optimizer, 
+    scheduler, 
+    train_loader, 
+    val_loader, 
+    device, 
+    num_epochs=3, 
+    save=False
+):
     best_loss = float("inf")
     best_model_state = None
     
