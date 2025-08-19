@@ -10,8 +10,8 @@ from scripts.preprocessing.delexicalization import (
     extract_slot_pairs_from_act
 )
 
-from transformers import T5Tokenizer
 from torch.utils.data import Dataset
+from transformers import PreTrainedTokenizer
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
@@ -96,7 +96,15 @@ def preprocess_action_prediction(dialogue: Dict, max_turns: int, delex: bool = F
 
 
 class ActionDataset(Dataset):
-    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_turns: int, max_output_len: int = 64, max_input_len: int = 64, delex: bool = False):
+    def __init__(
+        self, 
+        data: List[Dict], 
+        tokenizer: PreTrainedTokenizer, 
+        max_turns: int, 
+        max_output_len: int = 64, 
+        max_input_len: int = 64, 
+        delex: bool = False
+    ):
         self.tokenizer = tokenizer
         self.max_input_len = max_input_len
         self.max_output_len = max_output_len

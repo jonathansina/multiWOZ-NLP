@@ -1,19 +1,21 @@
 import tqdm
-import torch
 import pickle
-from typing import List, Literal, Union, Type, Any
+from typing import List, Literal, Union
+
+import torch
+from transformers import PreTrainedModel, PreTrainedTokenizer
 
 
 def inference_model(
-    model : Type[Any], 
-    tokenizer : Type[Any], 
+    model : PreTrainedModel, 
+    tokenizer : PreTrainedTokenizer, 
     input_text : Union[List[str], str], 
     max_length_encoder : int, 
     max_length_decoder : int, 
     device : Literal["cuda", "cpu", "mps"], 
     batch_size : int = 1, 
     save: bool = False
-):
+) -> Union[List[str], str]:
 
     model.eval()
     model.to(device)

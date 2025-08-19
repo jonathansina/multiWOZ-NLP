@@ -1,8 +1,20 @@
 import tqdm
+from typing import Type, Any, Literal
+
 import torch
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from transformers import PreTrainedModel
+from torch.optim.lr_scheduler import _LRScheduler
 
 
-def train_epoch(model, train_loader, optimizer, scheduler, device):
+def train_epoch(
+    model: PreTrainedModel, 
+    train_loader: DataLoader, 
+    optimizer: Optimizer, 
+    scheduler: _LRScheduler, 
+    device: Literal["cuda", "cpu", "mps"]
+) -> float:
     model.train()
     
     total_loss = 0
@@ -32,7 +44,11 @@ def train_epoch(model, train_loader, optimizer, scheduler, device):
     return total_loss / num_batches
 
 
-def evaluate_epoch(model, valid_loader, device):
+def evaluate_epoch(
+    model: PreTrainedModel, 
+    valid_loader: DataLoader, 
+    device: Literal["cuda", "cpu", "mps"]
+) -> float:
     model.eval()
     
     total_loss = 0
@@ -57,15 +73,16 @@ def evaluate_epoch(model, valid_loader, device):
 
 
 def train_model(
-    model, 
-    optimizer, 
-    scheduler, 
-    train_loader, 
-    val_loader, 
-    device, 
-    num_epochs=3, 
-    save=False
-):
+    model: PreTrainedModel, 
+    optimizer: Optimizer, 
+    scheduler: _LRScheduler, 
+    train_loader: DataLoader, 
+    val_loader: DataLoader, 
+    device: Literal["cuda", "cpu", "mps"], 
+    num_epochs: int = 3, 
+    save: bool = False
+) -> PreTrainedModel:
+
     best_loss = float("inf")
     best_model_state = None
     

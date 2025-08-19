@@ -1,8 +1,11 @@
+from typing import Dict
+
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 
 
-def find_zero_percentage(loader, name, max_length):
+def find_zero_percentage(loader: DataLoader, name: str, max_length: int) -> np.ndarray:
     return np.mean(
         [
             (loader.dataset[i][name] == 0).sum() / max_length
@@ -11,7 +14,7 @@ def find_zero_percentage(loader, name, max_length):
     )
 
 
-def plot_model_performance(train_evaluation, valid_evaluation):
+def plot_model_performance(train_evaluation: Dict[str, float], valid_evaluation: Dict[str, float]):
     plt.figure(figsize=(10, 6))
 
     metric_names = list(train_evaluation.keys())

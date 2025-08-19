@@ -11,9 +11,9 @@ from scripts.preprocessing.delexicalization import (
     extract_slot_pairs_from_act,
 )
 
-from transformers import T5Tokenizer
 from torch.utils.data import Dataset
 from bert_score import score as bert_score
+from transformers import PreTrainedTokenizer
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
@@ -96,7 +96,14 @@ def preprocess_text_realization(dialogue: Dict, delex: bool = False) -> List[Tup
 
 
 class ResponseDataset(Dataset):
-    def __init__(self, data: List[Dict], tokenizer: T5Tokenizer, max_output_len: int = 64, max_input_len: int = 64, delex: bool = False):
+    def __init__(
+        self, 
+        data: List[Dict], 
+        tokenizer: PreTrainedTokenizer,
+        max_output_len: int = 64, 
+        max_input_len: int = 64, 
+        delex: bool = False
+    ):
         self.tokenizer = tokenizer
         self.max_input_len = max_input_len
         self.max_output_len = max_output_len
