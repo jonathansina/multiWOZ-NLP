@@ -5,14 +5,14 @@ import torch
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from transformers import PreTrainedModel
-from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.lr_scheduler import LambdaLR
 
 
 def train_epoch(
     model: PreTrainedModel, 
     train_loader: DataLoader, 
     optimizer: Optimizer, 
-    scheduler: _LRScheduler, 
+    scheduler: LambdaLR, 
     device: Literal["cuda", "cpu", "mps"]
 ) -> float:
     model.train()
@@ -75,7 +75,7 @@ def evaluate_epoch(
 def train_model(
     model: PreTrainedModel, 
     optimizer: Optimizer, 
-    scheduler: _LRScheduler, 
+    scheduler: LambdaLR, 
     train_loader: DataLoader, 
     val_loader: DataLoader, 
     device: Literal["cuda", "cpu", "mps"], 
