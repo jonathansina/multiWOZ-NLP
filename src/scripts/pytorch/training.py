@@ -1,5 +1,5 @@
 import tqdm
-from typing import Type, Any, Literal
+from typing import Literal
 
 import torch
 from torch.optim import Optimizer
