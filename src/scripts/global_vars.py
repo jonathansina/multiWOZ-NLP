@@ -13,8 +13,10 @@ MAX_LENGTH_DECODER_RESPONSE = 32
 
 MAX_TURNS = 2
 
-USE_SAVE_CHECKPOINT = False
+USE_SAVE_CHECKPOINT = True
 
+DELEXICALIZATION_ACTION = True
+DELEXICALIZATION_RESPONSE = False
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")

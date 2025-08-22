@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")
 
 import tqdm
+import pickle
 from typing import List, Dict, Tuple
 
 from scripts.preprocessing.delexicalization import (
@@ -15,7 +16,7 @@ from transformers import PreTrainedTokenizer
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
-def get_evaluation_score(predictions: List[str], references: List[str]) -> float:
+def get_evaluation_score(predictions: List[str], references: List[str], save: bool = False) -> float:
     total_slots = 0
     missed_slots = 0
     smoothing = SmoothingFunction().method1
@@ -49,6 +50,12 @@ def get_evaluation_score(predictions: List[str], references: List[str]) -> float
 
     ser = 1 - (missed_slots / total_slots if total_slots > 0 else 0.0)
     avg_bleu = sum(bleu_scores) / len(bleu_scores)
+    
+    if save:
+        pickle.dump({
+            "bleu_score": avg_bleu,
+            "ser_score": ser
+        }, open(save, "wb"))
     
     return {
         "bleu_score": avg_bleu,

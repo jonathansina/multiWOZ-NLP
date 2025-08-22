@@ -14,7 +14,7 @@ def find_zero_percentage(loader: DataLoader, name: str, max_length: int) -> np.n
     )
 
 
-def plot_model_performance(train_evaluation: Dict[str, float], valid_evaluation: Dict[str, float]):
+def plot_model_performance(train_evaluation: Dict[str, float], valid_evaluation: Dict[str, float], save: bool = False):
     plt.figure(figsize=(10, 6))
 
     metric_names = list(train_evaluation.keys())
@@ -59,3 +59,6 @@ def plot_model_performance(train_evaluation: Dict[str, float], valid_evaluation:
         )
 
     plt.tight_layout()
+    
+    if save:
+        plt.savefig(save)
